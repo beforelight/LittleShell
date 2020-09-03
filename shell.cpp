@@ -13,6 +13,7 @@ shell::CLI cli(WriteSerialPort, &mySerialPort, 1024);
 
 int main() {
     initSerialPort();
+    cli.ShowTitle();
     cli.ShowHead();
     while (1) {
         cli.Process();

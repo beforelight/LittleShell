@@ -27,6 +27,11 @@ void shell::CLI::ShowHead(void)
 	RestoreColor(ConsoleColorSet::ConsoleFont);
 }
 
+void shell::CLI::ShowTitle(void)
+{
+	printf("\r\nxxxxxxxxxxx\r\n");
+}
+
 std::map<std::string, shell::CLI::CLI_CMD> shell::CLI::cmd_map;//static变量，意思注册的命令会被所有的实例访问
 
 
@@ -64,10 +69,9 @@ int shell::CLI::InsertCMD(CLI_CMD _cli_cmd)
 
 
 void shell::CLI::Process(void) {
-	
+
 	while (UsedSize()) {
 		Get((char*)&ch, 1);
-		std::printf("%d\r\n", (int)ch);//调试接口
 		//先进行按键识别
 		switch (state)
 		{
@@ -77,11 +81,34 @@ void shell::CLI::Process(void) {
 			case 27:
 				state = 1;//下一个状态
 				break;
+			case 9://tab制表符自动补全
+				str.push_back(0);
+				tabstring = std::string(&str[0]);
+				str.pop_back();
+				tablen = tabstring.length();
+				for (auto i = cmd_map.begin(); i != cmd_map.end(); i++)
+				{
+					if (0 == tabstring.compare(0, tablen, i->first, 0, tablen)) {
+						//找到匹配的命令
+						std::string a = (i->first.substr(tablen, i->first.length() - tablen));
+						printf(a.c_str());
+						for (const char* j = a.c_str(); *j != 0; j++)
+						{
+							str.push_back(*j);
+							pos++;
+							len++;
+						}
+					}
+				}
+				break;
 			case enter://换行
 				putchar('\r');//发送换行
 				putchar('\n');
+				if (str.size() == 0) { ShowHead(); break; }//如果命令为空直接跳过
 				str.push_back(0);//插入结束符号
-				history.push_back(str);//将本命令插入到历史记录
+				if (history.empty()||strcmp(&str[0],&history.back()[0])) {
+					history.push_back(str);//将本命令插入到历史记录
+				}
 				is_history_mode = 0;
 				if (history.size() > 20) { history.pop_front(); }
 				cmd_argv.clear();
@@ -197,7 +224,7 @@ void shell::CLI::Process(void) {
 					if (histIte != history.begin()) {
 						histIte--;
 						str = *histIte;
-						str.pop_back();//剔除最后的那个0结束标识符
+						//str.pop_back();//剔除最后的那个0结束标识符，这里会引起bug
 						putchar('\r');
 						ClearLine();
 						len = str.size();
@@ -234,7 +261,7 @@ void shell::CLI::Process(void) {
 						else
 						{
 							str = *histIte;
-							str.pop_back();//剔除最后的那个0结束标识符
+							//str.pop_back();//剔除最后的那个0结束标识符，这里会引起bug
 							putchar('\r');
 							ClearLine();
 							len = str.size();

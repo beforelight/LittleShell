@@ -83,6 +83,7 @@ namespace shell {
 		void SetOstream(ostream& _ostream);
 		void SetIstream(istream& _istream);
 		void ShowHead(void);
+		void ShowTitle(void);
 		void SetHead(std::string _head) { shell_head = _head; }
 		static int InsertCMD(CLI_CMD _cli_cmd);
 		static int Help(CLI& cli, const std::vector<char*>& argv);//内置命令
@@ -105,6 +106,8 @@ namespace shell {
 		std::string cmd_now;//构造Cmd
 		char find_cmd_arg;
 		std::map< std::string, CLI_CMD>::iterator map_ite;
+		std::string tabstring;//tab键补全用
+		int tablen;
 	public://控制台指令
 		enum class ConsoleColor :int
 		{
