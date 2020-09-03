@@ -21,9 +21,14 @@ void shell::CLI::SetIstream(istream& _istream)
 
 void shell::CLI::ShowHead(void)
 {
-	printf("\r\n");
+	SaveColor(ConsoleColorSet::ConsoleFont);
+	SetFontColor(ConsoleColor::GREEN);
 	wwrite((char*)shell_head.c_str(), shell_head.size());
+	RestoreColor(ConsoleColorSet::ConsoleFont);
 }
+
+std::map<std::string, shell::CLI::CLI_CMD> shell::CLI::cmd_map;//static变量，意思注册的命令会被所有的实例访问
+
 
 int shell::CLI::InsertCMD(CLI_CMD _cli_cmd)
 {
@@ -59,22 +64,7 @@ int shell::CLI::InsertCMD(CLI_CMD _cli_cmd)
 
 
 void shell::CLI::Process(void) {
-	//回显功能 字符识别状态机
-	static uint8_t ch;
-	static uint32_t key;//字符缓存
-	static uint8_t state;//字符状态机
-	static std::vector<char> str;//保存本行的字符
-	static uint32_t len;//本行字符串长度
-	static uint32_t pos;//本行字符串光标位置
-	static std::list<std::vector<char> > history;//命令历史
-	static std::list<std::vector<char> >::iterator histIte;//命令历史
-	static int last_cmd_cursor_pos;
-	static char is_history;//命令历史查询状态，当历史命令改变之后清0，查询开始置为1
-	static std::vector<char*>cmd_argv;
-	static std::string cmd_now;//构造Cmd
-	static char find_cmd_arg;
-	static std::map< std::string, CLI_CMD>::iterator ite;
-
+	
 	while (UsedSize()) {
 		Get((char*)&ch, 1);
 		std::printf("%d\r\n", (int)ch);//调试接口
@@ -92,7 +82,7 @@ void shell::CLI::Process(void) {
 				putchar('\n');
 				str.push_back(0);//插入结束符号
 				history.push_back(str);//将本命令插入到历史记录
-				is_history = 0;
+				is_history_mode = 0;
 				if (history.size() > 20) { history.pop_front(); }
 				cmd_argv.clear();
 				//构造参数列表
@@ -109,23 +99,29 @@ void shell::CLI::Process(void) {
 					}
 				}
 				cmd_now = std::string(&str[0]);//构造命令
-				ite = cmd_map.find(cmd_now);
-				if (ite != cmd_map.end()) {
-					int retval = (*ite->second.pFun)(*this, cmd_argv);//执行命令
+				map_ite = cmd_map.find(cmd_now);
+				if (map_ite != cmd_map.end()) {
+					int retval = (*map_ite->second.pFun)(*this, cmd_argv);//执行命令
 					if (retval != 0) {
-						printf("return code %d\r\n", retval);
+						SaveColor(ConsoleColorSet::ConsoleFont);
+						SetFontColor(ConsoleColor::light_RED);
+						printf("\r\nreturn code %d", retval);
+						RestoreColor(ConsoleColorSet::ConsoleFont);
 					}
 				}
 				else
 				{
-					printf("%s: command not found\r\n", cmd_now.c_str());
+					printf("%s: command not found", cmd_now.c_str());
 				}
 				//执行完命令之后开始准备
 				str.clear();
 				pos = 0;
 				len = 0;
 				state = 0;
+				putchar('\r');//发送换行
+				putchar('\n');
 				ShowHead();
+				Clear();//清空在执行命令期间接收的字符
 				break;
 			case backspace://退格
 				if (len) {
@@ -188,16 +184,16 @@ void shell::CLI::Process(void) {
 				state = 3;//下一个状态
 				break;
 			case 65://上
-				if (is_history == 0) {
+				if (is_history_mode == 0) {
 					if (history.size()) {
 						last_cmd_cursor_pos = pos;
 						history.push_back(str);
 						histIte = history.end();
 						histIte--;//--是因为现在最后一个元素是缓存了没有执行的指令
-						is_history =  1;
+						is_history_mode = 1;
 					}
 				}
-				if (is_history == 1) {
+				if (is_history_mode == 1) {
 					if (histIte != history.begin()) {
 						histIte--;
 						str = *histIte;
@@ -206,7 +202,7 @@ void shell::CLI::Process(void) {
 						ClearLine();
 						len = str.size();
 						pos = len;
-						wwrite((char*)shell_head.c_str(), shell_head.size());
+						ShowHead();
 						if (len) {
 							wwrite(&str[0], len);
 						}
@@ -215,13 +211,13 @@ void shell::CLI::Process(void) {
 
 				break;
 			case 66://下
-				if (is_history) {
+				if (is_history_mode) {
 					auto history_ite_m1 = history.end();
 					history_ite_m1--;
-					if (histIte != history_ite_m1){
+					if (histIte != history_ite_m1) {
 						histIte++;
 						if (histIte == history_ite_m1) {
-							is_history = 0;
+							is_history_mode = 0;
 							//恢复保存的未完成的指令
 							str = *histIte;
 							history.pop_back();
@@ -229,7 +225,7 @@ void shell::CLI::Process(void) {
 							ClearLine();
 							len = str.size();
 							pos = last_cmd_cursor_pos;
-							wwrite((char*)shell_head.c_str(), shell_head.size());
+							ShowHead();
 							if (len) {
 								wwrite(&str[0], len);
 							}
@@ -243,7 +239,7 @@ void shell::CLI::Process(void) {
 							ClearLine();
 							len = str.size();
 							pos = len;
-							wwrite((char*)shell_head.c_str(), shell_head.size());
+							ShowHead();
 							if (len) {
 								wwrite(&str[0], len);
 							}
@@ -326,7 +322,43 @@ int shell::CLI::Help(CLI& cli, const std::vector<char*>& argv)
 
 int shell::CLI::Clr(CLI& cli, const std::vector<char*>& argv)
 {
+	cli.printf("\033[H");
+	cli.printf("\033[2J");
 	return 0;
+}
+
+void shell::CLI::SetConsoleColor(ConsoleColor _color, ConsoleColorSet fontORbackgrand)
+{
+	color[(int)fontORbackgrand] = _color;
+	printf("\033[%d;%dm", (int)color[(int)fontORbackgrand] % 100,
+		(int)color[(int)fontORbackgrand] / 100 + (int)fontORbackgrand * 10);
+}
+
+void shell::CLI::SetFontColor(ConsoleColor _color)
+{
+	SetConsoleColor(_color, ConsoleColorSet::ConsoleFont);
+}
+
+void shell::CLI::SetBackgrandColor(ConsoleColor _color)
+{
+	SetConsoleColor(_color, ConsoleColorSet::ConsoleBackgrand);
+}
+
+void shell::CLI::Blinking(void)
+{
+	printf("\033[5m");
+}
+
+void shell::CLI::SaveColor(ConsoleColorSet fontORbackgrand)
+{
+	colorStack[(int)fontORbackgrand].push(color[(int)fontORbackgrand]);
+}
+
+void shell::CLI::RestoreColor(ConsoleColorSet fontORbackgrand)
+{
+	color[(int)fontORbackgrand] = colorStack[(int)fontORbackgrand].top();
+	colorStack[(int)fontORbackgrand].pop();
+	printf("\033[0;%dm", (int)color[(int)fontORbackgrand] + (int)fontORbackgrand * 10);
 }
 
 void shell::CLI::SaveCursorPosition(void)
@@ -352,6 +384,16 @@ void shell::CLI::MoveCursorForward(int n_characters)
 void shell::CLI::MoveCursorBackward(int n_characters)
 {
 	printf("\033[%dD", n_characters);
+}
+
+void shell::CLI::ResetCursor(void)
+{
+	printf("\033[H");
+}
+
+void shell::CLI::DisplayClear(void)
+{
+	printf("\033[2J");
 }
 
 

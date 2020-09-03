@@ -12,6 +12,7 @@ public:
 	uint32_t Get(T* dst, uint32_t len);
 	uint32_t Size(void);
 	uint32_t UsedSize(void);
+	void Clear(void);//清空缓存
 private:
 	uint32_t Min(uint32_t left, uint32_t right) { return left > right ? right : left; }
 	uint32_t size;
@@ -82,4 +83,10 @@ template<typename T>
 uint32_t FIFO<T>::UsedSize(void)
 {
 	return ((size + in - out) & size_mask);
+}
+
+template<class T>
+inline void FIFO<T>::Clear(void)
+{
+	out = in;
 }
