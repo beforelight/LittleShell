@@ -29,7 +29,10 @@ void shell::CLI::ShowHead(void)
 
 void shell::CLI::ShowTitle(void)
 {
-	printf("\r\nxxxxxxxxxxx\r\n");
+	SaveColor(ConsoleColorSet::ConsoleFont);
+	SetFontColor(ConsoleColor::WHITE);
+	printf("\r\n\r\n**********************  Welcome to CLI  *********************\r\n");
+	RestoreColor(ConsoleColorSet::ConsoleFont);
 }
 
 std::map<std::string, shell::CLI::CLI_CMD> shell::CLI::cmd_map;//static变量，意思注册的命令会被所有的实例访问
