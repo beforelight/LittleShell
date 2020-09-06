@@ -17,7 +17,6 @@ namespace shell {
 	class CLI;
 	typedef int (*CmdFuntion)(CLI& cli, const std::vector<char*>& argv);
 	typedef int (*Write)(void* fp, char* ptr, int len);
-	typedef int (*Console_Printf)(const char* formatString, ...);
 	class ostream {
 	public:
 		ostream(Write _write, void* _fp = NULL) :write(_write), fp(_fp) {
