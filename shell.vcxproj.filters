@@ -27,6 +27,9 @@
     <ClCompile Include="SerialPort.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="events.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLI.h">
@@ -36,6 +39,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="SerialPort.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="events.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
