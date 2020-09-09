@@ -109,6 +109,7 @@ void shell::CLI::Process(void) {
 				putchar('\n');
 				if (str.size() == 0) { ShowHead(); break; }//如果命令为空直接跳过
 				str.push_back(0);//插入结束符号
+				if (is_history_mode) { history.pop_back(); }
 				if (history.empty()||strcmp(&str[0],&history.back()[0])) {
 					history.push_back(str);//将本命令插入到历史记录
 				}
@@ -161,6 +162,7 @@ void shell::CLI::Process(void) {
 					SaveCursorPosition();
 					if (len == pos) {
 						putchar(' ');//刚刚的用空格填充
+						str.pop_back();
 					}
 					else {
 						auto position = str.begin() + pos;

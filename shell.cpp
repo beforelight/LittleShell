@@ -32,7 +32,7 @@ int WriteSerialPort(void* fp, char* ptr, int len)
 int initSerialPort(void)
 {
     mySerialPort.pcli = &cli;
-    if (!mySerialPort.InitPort(5, 115200))
+    if (!mySerialPort.InitPort(8, 115200))
     {
         std::cout << "initPort fail !" << std::endl;
     }
