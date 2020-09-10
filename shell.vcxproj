@@ -145,7 +145,6 @@
   <ItemGroup>
     <ClCompile Include="CLI.cpp" />
     <ClCompile Include="events.cpp" />
-    <ClCompile Include="fifo.cpp" />
     <ClCompile Include="SerialPort.cpp" />
     <ClCompile Include="shell.cpp" />
   </ItemGroup>

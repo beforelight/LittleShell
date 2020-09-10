@@ -21,9 +21,6 @@
     <ClCompile Include="CLI.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="fifo.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="SerialPort.cpp">
       <Filter>源文件</Filter>
     </ClCompile>

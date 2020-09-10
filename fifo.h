@@ -1,18 +1,21 @@
 ﻿#pragma once
 #include <stdint.h>
 #include <string.h>
-
+//循环缓冲RingBuffer，这里size/len/大小指多少个class T
+//
+//最后更新日期：2020年9月10日
 template<class T>
 class FIFO {
 public:
 	FIFO(uint32_t _size = 1024);
-	FIFO(const FIFO &fifo);
+	FIFO(const FIFO& fifo);
 	~FIFO();
-	uint32_t Put(T* src, uint32_t len);
-	uint32_t Get(T* dst, uint32_t len);
-	uint32_t Size(void);
-	uint32_t UsedSize(void);
-	void Clear(void);//清空缓存
+	uint32_t Put(T* src, uint32_t len);//将数据写入buff，返回实际读写大小
+	uint32_t Get(T* dst, uint32_t len);//从buff读出，返回实际读写大小
+	uint32_t Size(void);//环形buff大小
+	uint32_t UsedSize(void);//已使用大小
+	uint32_t UnusedSize(void);//未使用大小
+	void Clear(void);//清空buff
 private:
 	uint32_t Min(uint32_t left, uint32_t right) { return left > right ? right : left; }
 	uint32_t size;
@@ -83,6 +86,12 @@ template<typename T>
 uint32_t FIFO<T>::UsedSize(void)
 {
 	return ((size + in - out) & size_mask);
+}
+
+template<class T>
+inline uint32_t FIFO<T>::UnusedSize(void)
+{
+	return ((size + out - in) & size_mask);
 }
 
 template<class T>

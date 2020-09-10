@@ -117,6 +117,7 @@ void shell::CLI::Process(void) {
 				if (history.size() > 20) { history.pop_front(); }
 				cmd_argv.clear();
 				//构造参数列表
+				find_cmd_arg = 0;
 				for (auto i = str.begin(); i != str.end(); i++)
 				{
 					if (*i == ' ') {

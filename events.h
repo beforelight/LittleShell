@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿//事件驱动类
+
+#pragma once
 #include<stdint.h>
 #include<string>
 #include<map>
@@ -12,9 +14,9 @@ public:
 	{
 		receiver.clear();
 	}
-	void SetEventReceiver(uint8_t _event_id, EventReceiver _receiver);
-	void SendEvent(uint8_t  _event_id);
-	void Process(void);
+	void SetEventReceiver(uint8_t _event_id, EventReceiver _receiver);//为特定事件设置接收者，一对多or多对一
+	void SendEvent(uint8_t  _event_id);//发送事件
+	void Process(void);//处理主程序
 private:
 	FIFO<uint8_t> fifo;
 	std::map<uint8_t, std::vector<EventReceiver> > receiver;
