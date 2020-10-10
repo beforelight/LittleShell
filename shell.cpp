@@ -11,8 +11,16 @@ int WriteSerialPort(void* fp, char* ptr, int len);
 int initSerialPort(void);
 shell::CLI cli(WriteSerialPort, &mySerialPort, 1024);
 
-
-
+int mycmd(shell::CLI& cli, const std::vector<const char*>& argv) {
+    for (auto i:argv)
+    {
+        cli.printf(i);
+        cli.printf("\t");
+    }
+    cli.printf("\r\n");
+    return 0;
+}
+shell::CLI::CLI_CMD xxxxx("cmd", mycmd, "printf argv");
 int main() {
     //TODO
     //查询模式下不保留最后一次输入

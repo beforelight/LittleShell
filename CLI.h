@@ -11,6 +11,10 @@
 #include "fifo.h"
 #include <stack>
 #include <list>
+#ifdef CLI_DEBUG
+#include <iostream>
+#endif // CLI_DEBUG
+
 namespace shell {
 	class ostream;
 	class istream;
@@ -52,8 +56,8 @@ namespace shell {
 			CmdFuntion pFun;
 			std::string helpInfo;
 		};
-		CLI(ostream _ostream, istream _istream, std::string _shell_head = "shell>> ") :
-			ostream(_ostream), istream(_istream), shell_head(_shell_head)
+		CLI(ostream _ostream, istream _istream, std::string _shell_head = "shell>> ", uint32_t _history_size_max = 100) :
+			ostream(_ostream), istream(_istream), shell_head(_shell_head), history_size_limit(_history_size_max)
 		{
 			//注册默认命令
 			InsertCMD(CLI_CMD("help", CLI::Help, "Print the help information"));
@@ -70,7 +74,7 @@ namespace shell {
 			len = 0;
 			pos = 0;
 			history.clear();
-			last_cmd_cursor_pos = 0;
+			//last_cmd_cursor_pos = 0;
 			is_history_mode = 0;
 			cmd_argv.clear();
 			find_cmd_arg = 0;
@@ -97,16 +101,17 @@ namespace shell {
 		std::vector<char> str;//保存本行的字符
 		uint32_t len;//本行字符串长度
 		uint32_t pos;//本行字符串光标位置
-		std::list<std::vector<char> > history;//命令历史
+		std::list<std::vector<char> > history;//命令历史，未被执行的命令不会进入到历史
 		std::list<std::vector<char> >::iterator histIte;//命令历史iterator
-		uint32_t last_cmd_cursor_pos;//未执行命令的输入光标位置
+		uint32_t history_size_limit;//命令历史记录个数限制
+		//uint32_t last_cmd_cursor_pos;//未执行命令的输入光标位置//此功能删除，因容易造成bug
 		char is_history_mode;//命令历史查询状态，当历史命令改变之后清0，查询开始置为1
 		std::vector<const char*>cmd_argv;//构造参数列表
 		std::string cmd_now;//构造Cmd
 		char find_cmd_arg;//构造参数列表时的flag
 		std::map< std::string, CLI_CMD>::iterator map_ite;
 		std::string tabstring;//tab键补全用
-		int tablen;
+		int tablen;//tab键补全用
 	public://控制台指令
 		enum class ConsoleColor :int
 		{

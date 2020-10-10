@@ -109,14 +109,20 @@ void shell::CLI::Process(void) {
 				putchar('\n');
 				if (str.size() == 0) { ShowHead(); break; }//如果命令为空直接跳过
 				str.push_back(0);//插入结束符号
-				if (is_history_mode) { history.pop_back(); }
-				if (history.empty()||strcmp(&str[0],&history.back()[0])) {
+#ifdef CLI_DEBUG //调试输出
+				for (auto dbi : history) {
+					std::cout << "历史命令:" << &dbi[0] << std::endl;
+				}
+				std::cout << "当前行:" << &str[0] << std::endl;
+#endif // CLI_DEBUG
+				if (history.empty() || strcmp(&str[0], &history.back()[0])) {
+					//如果命令历史为空或者当前命令和历史最后一条不同的话插入
 					history.push_back(str);//将本命令插入到历史记录
+
 				}
 				is_history_mode = 0;
-				if (history.size() > 20) { history.pop_front(); }
-				cmd_argv.clear();
-				//构造参数列表
+				if (history.size() > history_size_limit) { history.pop_front(); }
+				cmd_argv.clear();//清空以开始构造参数列表
 				find_cmd_arg = 0;
 				for (auto i = str.begin(); i != str.end(); i++)
 				{
@@ -219,10 +225,7 @@ void shell::CLI::Process(void) {
 			case 65://上
 				if (is_history_mode == 0) {
 					if (history.size()) {
-						last_cmd_cursor_pos = pos;
-						history.push_back(str);
 						histIte = history.end();
-						histIte--;//--是因为现在最后一个元素是缓存了没有执行的指令
 						is_history_mode = 1;
 					}
 				}
@@ -233,6 +236,7 @@ void shell::CLI::Process(void) {
 						//str.pop_back();//剔除最后的那个0结束标识符，这里会引起bug
 						putchar('\r');
 						ClearLine();
+						str.pop_back();
 						len = str.size();
 						pos = len;
 						ShowHead();
@@ -241,7 +245,6 @@ void shell::CLI::Process(void) {
 						}
 					}
 				}
-
 				break;
 			case 66://下
 				if (is_history_mode) {
@@ -249,34 +252,26 @@ void shell::CLI::Process(void) {
 					history_ite_m1--;
 					if (histIte != history_ite_m1) {
 						histIte++;
-						if (histIte == history_ite_m1) {
-							is_history_mode = 0;
-							//恢复保存的未完成的指令
-							str = *histIte;
-							history.pop_back();
-							putchar('\r');
-							ClearLine();
-							len = str.size();
-							pos = last_cmd_cursor_pos;
-							ShowHead();
-							if (len) {
-								wwrite(&str[0], len);
-							}
-							MoveCursorBackward(len - pos);//恢复光标的位置
+						str = *histIte;
+						putchar('\r');
+						ClearLine();
+						str.pop_back();
+						len = str.size();
+						pos = len;
+						ShowHead();
+						if (len) {
+							wwrite(&str[0], len);
 						}
-						else
-						{
-							str = *histIte;
-							//str.pop_back();//剔除最后的那个0结束标识符，这里会引起bug
-							putchar('\r');
-							ClearLine();
-							len = str.size();
-							pos = len;
-							ShowHead();
-							if (len) {
-								wwrite(&str[0], len);
-							}
-						}
+					}
+					else
+					{
+						is_history_mode = 0;
+						str.clear();
+						len = 0;
+						pos = 0;
+						putchar('\r');
+						ClearLine();
+						ShowHead();
 					}
 				}
 				break;
