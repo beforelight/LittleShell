@@ -20,7 +20,7 @@ int mycmd(shell::CLI& cli, const std::vector<const char*>& argv) {
     cli.printf("\r\n");
     return 0;
 }
-shell::CLI::CLI_CMD xxxxx("cmd", mycmd, "printf argv");
+shell::CLI::CMD xxxxx("cmd", mycmd, "printf argv");
 int main() {
     //TODO
     //查询模式下不保留最后一次输入

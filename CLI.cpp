@@ -35,17 +35,17 @@ void shell::CLI::ShowTitle(void)
 	RestoreColor(ConsoleColorSet::ConsoleFont);
 }
 
-std::map<std::string, shell::CLI::CLI_CMD> shell::CLI::cmd_map;//static变量，意思注册的命令会被所有的实例访问
+std::map<std::string, shell::CLI::CMD> shell::CLI::cmd_map;//static变量，意思注册的命令会被所有的实例访问
 
 
-int shell::CLI::InsertCMD(CLI_CMD _cli_cmd)
+int shell::CLI::InsertCMD(CMD _cli_cmd)
 {
-	if (cmd_map.count(_cli_cmd.cmd)) {
+	if (cmd_map.count(_cli_cmd.name)) {
 		return -1;//已经存在有了
 	}
 	else
 	{
-		cmd_map[_cli_cmd.cmd] = _cli_cmd;
+		cmd_map[_cli_cmd.name] = _cli_cmd;
 		return 0;
 	}
 }
@@ -139,7 +139,7 @@ void shell::CLI::Process(void) {
 				cmd_now = std::string(&str[0]);//构造命令
 				map_ite = cmd_map.find(cmd_now);
 				if (map_ite != cmd_map.end()) {
-					int retval = (*map_ite->second.pFun)(*this, cmd_argv);//执行命令
+					int retval = map_ite->second.Run(*this, cmd_argv);//执行命令
 					if (retval != 0) {
 						SaveColor(ConsoleColorSet::ConsoleFont);
 						SetFontColor(ConsoleColor::light_RED);

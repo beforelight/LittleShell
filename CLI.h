@@ -4,8 +4,7 @@
 
 #ifndef SHELL_CLI_H
 #define SHELL_CLI_H
-
-#include <sstream>
+#include <memory>
 #include <map>
 #include <vector>
 #include "fifo.h"
@@ -19,7 +18,7 @@ namespace shell {
 	class ostream;
 	class istream;
 	class CLI;
-	typedef int (*CmdFuntion)(CLI& cli, const std::vector<const char*>& argv);
+	//typedef int (*CmdFuntion)(CLI& cli, const std::vector<const char*>& argv);
 	typedef int (*Write)(void* fp, char* ptr, int len);
 	class ostream {
 	public:
@@ -46,22 +45,92 @@ namespace shell {
 
 	class CLI :public ostream, public istream {
 	public:
-		struct CLI_CMD {
-			CLI_CMD() {}
-			CLI_CMD(std::string _cmd, CmdFuntion _pFun, std::string _helpInfo = "什么都没有写") :
-				cmd(_cmd), pFun(_pFun), helpInfo(_helpInfo) {
+		struct CMD {
+		protected:
+			class CmdFuntion {
+			public:
+				virtual int RunFunc(CLI& _cli, const std::vector<const char*>& _argv) = 0;
+			};
+			class CmdFuntionType1 :public CmdFuntion {
+			public:
+				CmdFuntionType1(int (*_funtion)(CLI&, const std::vector<const char*>&)) :
+					funtion(_funtion) {}
+				int RunFunc(CLI& _cli, const std::vector<const char*>& _argv) {
+					return (*funtion)(_cli, _argv);
+				}
+			private:
+				int (*funtion)(CLI&, const std::vector<const char*>&);
+			};
+			class CmdFuntionType2 :public CmdFuntion {
+			public:
+				CmdFuntionType2(int (*_funtion)(const std::vector<const char*>&)) :
+					funtion(_funtion) {}
+				int RunFunc(CLI& _cli, const std::vector<const char*>& _argv) {
+					return (*funtion)(_argv);
+				}
+			private:
+				int (*funtion)(const std::vector<const char*>&);
+			};
+			class CmdFuntionType3 :public CmdFuntion {
+			public:
+				CmdFuntionType3(int (*_funtion)(int, char**)) :
+					funtion(_funtion) {}
+				int RunFunc(CLI& _cli, const std::vector<const char*>& _argv) {
+					return (*funtion)(_argv.size(), (char**)(&_argv[0]));
+				}
+			private:
+				int (*funtion)(int, char**);
+			};
+		public:
+			CMD() {}
+			//class CmdFuntionType1
+			CMD(std::string _name ,
+				int (*_funtion)(CLI&, const std::vector<const char*>&),
+				std::string _helpInfo = "<the help information>") :
+				name(_name), pFun(new CmdFuntionType1(_funtion)), helpInfo(_helpInfo) {
 				InsertCMD(*this);
 			}
-			std::string cmd;
-			CmdFuntion pFun;
+			CMD(std::string _name,
+				int (*_funtion)(CLI&, const std::vector<char*>&),
+				std::string _helpInfo = "<the help information>") :
+				CMD(_name, (int (*)(CLI&, const std::vector<const char*>&))_funtion, _helpInfo) {}
+			//class CmdFuntionType2
+			CMD(std::string _name,
+				int (*_funtion)(const std::vector<const char*>&),
+				std::string _helpInfo = "<the help information>") :
+				name(_name), pFun(new CmdFuntionType2(_funtion)), helpInfo(_helpInfo) {
+				InsertCMD(*this);
+			}
+			CMD(std::string _name,
+				int (*_funtion)(const std::vector<char*>&),
+				std::string _helpInfo = "<the help information>") :
+				CMD(_name, (int (*)(const std::vector<const char*>&))_funtion, _helpInfo) {}
+			//class CmdFuntionType3
+			CMD(std::string _name,
+				int (*_funtion)(int, char**),
+				std::string _helpInfo = "<the help information>") :
+				name(_name), pFun(new CmdFuntionType3(_funtion)), helpInfo(_helpInfo) {
+				InsertCMD(*this);
+			}
+			CMD(std::string _name,
+				int (*_funtion)(int, const char**),
+				std::string _helpInfo = "<the help information>") :
+				CMD(_name, (int (*)(int, char**))_funtion, _helpInfo) {}
+			virtual int Run(CLI& _cli, const std::vector<const char*>& _argv) {
+				return pFun->RunFunc(_cli, _argv);
+			}
+		public:
+			std::string name;
 			std::string helpInfo;
+		protected:
+			std::shared_ptr< CmdFuntion> pFun;
 		};
 		CLI(ostream _ostream, istream _istream, std::string _shell_head = "shell>> ", uint32_t _history_size_max = 100) :
 			ostream(_ostream), istream(_istream), shell_head(_shell_head), history_size_limit(_history_size_max)
 		{
 			//注册默认命令
-			InsertCMD(CLI_CMD("help", CLI::Help, "Print the help information"));
-			InsertCMD(CLI_CMD("clr", CLI::Clr, "Clear the console"));
+			InsertCMD(CMD("help", CLI::Help, "Print the help information"));
+			InsertCMD(CMD("clr", CLI::Clr, "Clear the console"));
 
 			//控制台指令变量
 			color[(int)ConsoleColorSet::ConsoleFont] = ConsoleColor::light_WHITE;
@@ -88,12 +157,12 @@ namespace shell {
 		void ShowHead(void);
 		void ShowTitle(void);
 		void SetHead(std::string _head) { shell_head = _head; }
-		static int InsertCMD(CLI_CMD _cli_cmd);//注册命令，注册的命令会被所有实例访问
+		static int InsertCMD(CMD _cli_cmd);//注册命令，注册的命令会被所有实例访问
 		static int Help(CLI& cli, const std::vector<const char*>& argv);//内置命令，打帮助信息
 		static int Clr(CLI& cli, const std::vector<const char*>& argv);//内置命令，清空控制台
 	private:
 		std::string shell_head;
-		static std::map<std::string, CLI_CMD> cmd_map;//注册的命令会被所有的实例访问
+		static std::map<std::string, CMD> cmd_map;//注册的命令会被所有的实例访问
 	private:
 		uint8_t ch;//字符
 		uint32_t key;//字符缓存
@@ -109,7 +178,7 @@ namespace shell {
 		std::vector<const char*>cmd_argv;//构造参数列表
 		std::string cmd_now;//构造Cmd
 		char find_cmd_arg;//构造参数列表时的flag
-		std::map< std::string, CLI_CMD>::iterator map_ite;
+		std::map< std::string, CMD>::iterator map_ite;
 		std::string tabstring;//tab键补全用
 		int tablen;//tab键补全用
 	public://控制台指令
