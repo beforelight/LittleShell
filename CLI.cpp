@@ -331,7 +331,7 @@ void shell::CLI::Process(void) {
 	//退格删除 使用保存光标位置然后清理行来实现
 }
 
-int shell::CLI::Help(CLI& cli, const std::vector<char*>& argv)
+int shell::CLI::Help(CLI& cli, const std::vector<const char*>& argv)
 {
 	if (argv.size() == 1) {
 		std::string arg(argv[0]);
@@ -353,7 +353,7 @@ int shell::CLI::Help(CLI& cli, const std::vector<char*>& argv)
 	return 0;
 }
 
-int shell::CLI::Clr(CLI& cli, const std::vector<char*>& argv)
+int shell::CLI::Clr(CLI& cli, const std::vector<const char*>& argv)
 {
 	cli.printf("\033[H");
 	cli.printf("\033[2J");

@@ -15,7 +15,7 @@ namespace shell {
 	class ostream;
 	class istream;
 	class CLI;
-	typedef int (*CmdFuntion)(CLI& cli, const std::vector<char*>& argv);
+	typedef int (*CmdFuntion)(CLI& cli, const std::vector<const char*>& argv);
 	typedef int (*Write)(void* fp, char* ptr, int len);
 	class ostream {
 	public:
@@ -85,8 +85,8 @@ namespace shell {
 		void ShowTitle(void);
 		void SetHead(std::string _head) { shell_head = _head; }
 		static int InsertCMD(CLI_CMD _cli_cmd);//注册命令，注册的命令会被所有实例访问
-		static int Help(CLI& cli, const std::vector<char*>& argv);//内置命令，打帮助信息
-		static int Clr(CLI& cli, const std::vector<char*>& argv);//内置命令，清空控制台
+		static int Help(CLI& cli, const std::vector<const char*>& argv);//内置命令，打帮助信息
+		static int Clr(CLI& cli, const std::vector<const char*>& argv);//内置命令，清空控制台
 	private:
 		std::string shell_head;
 		static std::map<std::string, CLI_CMD> cmd_map;//注册的命令会被所有的实例访问
@@ -101,7 +101,7 @@ namespace shell {
 		std::list<std::vector<char> >::iterator histIte;//命令历史iterator
 		uint32_t last_cmd_cursor_pos;//未执行命令的输入光标位置
 		char is_history_mode;//命令历史查询状态，当历史命令改变之后清0，查询开始置为1
-		std::vector<char*>cmd_argv;//构造参数列表
+		std::vector<const char*>cmd_argv;//构造参数列表
 		std::string cmd_now;//构造Cmd
 		char find_cmd_arg;//构造参数列表时的flag
 		std::map< std::string, CLI_CMD>::iterator map_ite;

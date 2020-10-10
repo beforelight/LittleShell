@@ -11,7 +11,11 @@ int WriteSerialPort(void* fp, char* ptr, int len);
 int initSerialPort(void);
 shell::CLI cli(WriteSerialPort, &mySerialPort, 1024);
 
+
+
 int main() {
+    //TODO
+    //查询模式下不保留最后一次输入
     initSerialPort();
     cli.ShowTitle();
     cli.ShowHead();
