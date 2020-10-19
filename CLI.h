@@ -10,6 +10,7 @@
 #include "fifo.h"
 #include <stack>
 #include <list>
+#include <string>
 #ifdef CLI_DEBUG
 #include <iostream>
 #endif // CLI_DEBUG
