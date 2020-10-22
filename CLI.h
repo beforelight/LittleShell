@@ -11,6 +11,7 @@
 #include <stack>
 #include <list>
 #include <string>
+#include <functional>
 #ifdef CLI_DEBUG
 #include <iostream>
 #endif // CLI_DEBUG
@@ -82,6 +83,16 @@ namespace shell {
 			private:
 				int (*funtion)(int, char**);
 			};
+			class CmdFuntionType4 :public CmdFuntion {
+			public:
+				CmdFuntionType4(std::function<int(CLI&, const std::vector<const char*>&)> _func) :func(_func) {}
+				int RunFunc(CLI& _cli, const std::vector<const char*>& _argv) {
+					return func(_cli, _argv);
+				}
+			private:
+				std::function<int(CLI&, const std::vector<const char*>&)> func;
+			};
+
 		public:
 			CMD() {}
 			//class CmdFuntionType1
@@ -117,7 +128,14 @@ namespace shell {
 				int (*_funtion)(int, const char**),
 				std::string _helpInfo = "<the help information>") :
 				CMD(_name, (int (*)(int, char**))_funtion, _helpInfo) {}
-			virtual int Run(CLI& _cli, const std::vector<const char*>& _argv) {
+
+			//class CmdFuntionType4
+			CMD(std::string _name, std::string _helpInfo,
+				std::function<int(CLI&, const std::vector<const char*>&)> _func) :
+				name(_name), helpInfo(_helpInfo),
+				pFun(new CmdFuntionType4(_func)) {}
+
+			int Run(CLI& _cli, const std::vector<const char*>& _argv) {
 				return pFun->RunFunc(_cli, _argv);
 			}
 		public:
