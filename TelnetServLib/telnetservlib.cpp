@@ -260,20 +260,21 @@ void TelnetSession::update()
 
     // Check for errors from the read
     int error = WSAGetLastError();
-    if (error != WSAEWOULDBLOCK && error != 0)
-    {
+    if (error != WSAEWOULDBLOCK && error != 0) {
         std::cout << "Receive failed with Winsock error code: " << error << "\r\n";
         std::cout << "Closing session and socket.\r\n";
         closesocket(m_socket);
         return;
     }
-
     if (readBytes > 0) {
+        m_telnetServer->newCharCallBack()(shared_from_this(), recvbuf, readBytes);
+    }
+//    if (readBytes > 0) {
+    if (0) {
         // Echo it back to the sender
         echoBack(recvbuf, readBytes);
         // we've got to be careful here. Telnet client might send null characters for New Lines mid-data block. We need to swap these out. recv is not null terminated, so its cool
-        for (int i = 0; i < readBytes; i++)
-        {
+        for (int i = 0; i < readBytes; i++) {
             if (recvbuf[i] == 0x00)
                 recvbuf[i] = 0x0A;      // New Line
         }
@@ -282,12 +283,6 @@ void TelnetSession::update()
         m_buffer.append(recvbuf, readBytes);
 
         stripNVT(m_buffer);                         // Remove telnet negotiation sequences
-
-        for (int i = 0; i < readBytes; i++)
-        {
-            printf("%d\r\n", (int)recvbuf[i]);
-        }
-        return;
 
         bool requirePromptReprint = false;
 

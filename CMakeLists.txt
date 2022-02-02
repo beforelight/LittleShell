@@ -4,7 +4,6 @@ project(LittleShell)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(.)
+include_directories(TelnetServLib)
 
-add_executable(LittleShell
-        LittleShell.cpp
-        LittleShell.hpp)
+add_executable(TelnetShell TelnetShell.cpp LittleShell.cpp TelnetServLib/telnetservlib.cpp )

@@ -13,7 +13,7 @@
 namespace LittleShell {
     class FIFO;
     class ostream;
-    class istream;
+    using istream = FIFO;
     class CLI;
 
     class FIFO {
@@ -61,8 +61,7 @@ namespace LittleShell {
         void *fp = nullptr;
         char printBuf[256] = {0};
     };
-    class istream : public FIFO {
-    };
+
     class CLI : public ostream, public istream {
     public:
         struct CMD {

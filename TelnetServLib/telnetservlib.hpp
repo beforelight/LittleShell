@@ -109,6 +109,7 @@ public:
     void closeClient();                 // Finish the session
 
     static void UNIT_TEST();
+    void echoBack(char * buffer, u_long length);
 
 protected:
     void initialise();                  // 
@@ -117,7 +118,6 @@ protected:
 private:
     void sendPromptAndBuffer();         // Write the prompt and any data sat in the input buffer
     void eraseLine();                   // Erase all characters on the current line and move prompt back to beginning of line
-    void echoBack(char * buffer, u_long length);
     static void stripNVT(std::string &buffer);
     static void stripEscapeCharacters(std::string &buffer);                 // Remove all escape characters from the line
     static bool processBackspace(std::string &buffer);                      // Takes backspace commands and removes them and the preceeding character from the m_buffer. // Handles arrow key actions for history management. Returns true if the input buffer was changed.
@@ -129,20 +129,20 @@ private:
     SOCKET m_socket;                // The Winsock socket
     std::shared_ptr<TelnetServer> m_telnetServer; // Parent TelnetServer class
     std::string m_buffer;           // Buffer of input data (mid line)
-    std::list<std::string>           m_history;  // A history of all completed commands
+    std::list<std::string> m_history;  // A history of all completed commands
     std::list<std::string>::iterator m_historyCursor;
 
-friend TelnetServer;
+    friend TelnetServer;
 };
 
-typedef std::shared_ptr<TelnetSession>   SP_TelnetSession;
-typedef std::vector < SP_TelnetSession > VEC_SP_TelnetSession;
+typedef std::shared_ptr<TelnetSession> SP_TelnetSession;
+typedef std::vector<SP_TelnetSession> VEC_SP_TelnetSession;
 
-typedef std::function< void(SP_TelnetSession) >              FPTR_ConnectedCallback;
-typedef std::function< void(SP_TelnetSession, std::string) > FPTR_NewLineCallback;
+typedef std::function<void(SP_TelnetSession)> FPTR_ConnectedCallback;
+typedef std::function<void(SP_TelnetSession, std::string)> FPTR_NewLineCallback;
+typedef std::function<void(SP_TelnetSession, char *, u_long)> FPTR_NewCharCallback;
 
-class TelnetServer : public std::enable_shared_from_this < TelnetServer >
-{
+class TelnetServer : public std::enable_shared_from_this<TelnetServer> {
 public:
     TelnetServer() : m_initialised(false), m_promptString("") {};
 
@@ -156,6 +156,10 @@ public:
 
     void newLineCallback(FPTR_NewLineCallback f) { m_newlineCallback = f; }
     FPTR_NewLineCallback newLineCallBack() const { return m_newlineCallback; }
+
+    void newCharCallback(FPTR_NewCharCallback f) { m_newCharCallback = f; }
+    FPTR_NewCharCallback newCharCallBack() const { return m_newCharCallback; }
+
 
     VEC_SP_TelnetSession sessions() const { return m_sessions; }
 
@@ -176,4 +180,5 @@ private:
 protected:
     FPTR_ConnectedCallback m_connectedCallback;     // Called after the telnet session is initialised. function(SP_TelnetSession) {}
     FPTR_NewLineCallback   m_newlineCallback;       // Called after every new line (from CR or LF)     function(SP_TelnetSession, std::string) {}
+    FPTR_NewCharCallback   m_newCharCallback;
 };
