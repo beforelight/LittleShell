@@ -90,8 +90,9 @@ namespace LittleShell {
         static std::map<std::string, LittleShell::CLI::CMD> cmd_map;
     private:
         uint8_t ch = 0;//字符
-        uint32_t key = 0;//字符缓存
         uint8_t state = 0;//字符状态机，用于处理多字节按键
+        uint8_t key_size = 0;//单字符大小
+        uint32_t key = 0;//字符缓存
         std::vector<char> str;//保存本行的字符
         uint32_t len = 0;//本行字符串长度
         uint32_t pos = 0;//本行字符串光标位置
@@ -106,6 +107,10 @@ namespace LittleShell {
         std::map<std::string, CMD>::iterator map_ite;
         std::string tabstring;//tab键补全用
         int tablen = 0;//tab键补全用
+        void ProcessKeySize1(void);//处理固定大小的字符
+        void ProcessKeySize2(void);//处理固定大小的字符
+        void ProcessKeySize3(void);//处理固定大小的字符
+        void ProcessKeySize4(void);//处理固定大小的字符
     public://控制台指令
         enum class ConsoleColor : int {
             light_BLACK = 30,

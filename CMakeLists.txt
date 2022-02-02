@@ -3,6 +3,8 @@ project(LittleShell)
 
 set(CMAKE_CXX_STANDARD 14)
 
+add_definitions(-DCLI_DEBUG)
+
 include_directories(.)
 include_directories(TelnetServLib)
 
