@@ -10,16 +10,27 @@
 #include <map>
 #include <list>
 #include <stack>
+#include <atomic>
+#include <memory>
+#if _M_X64
+#include <thread>
+#include <processthreadsapi.h>
+#undef min
+#undef max
+#else
+#endif
+#include <stack>
 namespace LittleShell {
     class FIFO;
     class ostream;
     using istream = FIFO;
+    class ios;
     class CLI;
 
     class FIFO {
     public:
         //构造
-        explicit FIFO(uint32_t _size = 1024);
+        explicit FIFO(uint32_t _size = 256);
         //析构
         ~FIFO();
         //拷贝构造
@@ -61,32 +72,34 @@ namespace LittleShell {
         void *fp = nullptr;
         char printBuf[256] = {0};
     };
-
-    class CLI : public ostream, public istream {
+    class ios : public ostream, public istream {
     public:
+        ios(ostream _ostream, const istream &_istream) : ostream(_ostream), istream(_istream) {}
+    };
+
+    class CLI : public ios {
+    public:
+        using CMD_function = std::function<int(ios &, const std::vector<const char *> &)>;
         struct CMD {
             CMD() = default;
-            CMD(std::string _name,
-                std::string _helpInfo,
-                std::function<int(CLI &, const std::vector<const char *> &)> _func) :
+            CMD(std::string _name, std::string _helpInfo, CLI::CMD_function _func) :
                     name(std::move(_name)), helpInfo(std::move(_helpInfo)), func(std::move(_func)) {}
-            std::function<int(CLI &, const std::vector<const char *> &)> func;
             std::string name;
             std::string helpInfo;
+            CMD_function func;
         };
-        CLI(ostream _ostream, istream _istream, std::string _promptString = "shell>> ") :
-                ostream(_ostream), istream(std::move(_istream)), shell_head(std::move(_promptString)) {}
-
+        CLI(ostream _ostream, const istream &_istream, std::string _promptString = "sh>> ") :
+                ios(_ostream, _istream), promptString(std::move(_promptString)), cmd_ios(_ostream, istream(256)) {}
         void Process(void);//命令行主函数
         void SetOstream(ostream &_ostream);//设置输出流
         void SetIstream(istream &_istream);//设置输入流
-        void ShowHead(void);
-        void SetHead(std::string _head) { shell_head = _head; }
-        static int InsertCMD(CMD _cli_cmd);//注册命令，注册的命令会被所有实例访问
-        static int Help(CLI &cli, const std::vector<const char *> &argv);//内置命令，打帮助信息
-        static int Clr(CLI &cli, const std::vector<const char *> &argv);//内置命令，清空控制台
+        void ShowPrompt(void);
+        void SetPrompt(std::string _head) { promptString = _head; }
+        static int InsertCMD(const CLI::CMD &_cli_cmd);//注册命令，注册的命令会被所有实例访问
+        static int Help(ios &ios, const std::vector<const char *> &argv);//内置命令，打帮助信息
+        static int Clr(ios &ios, const std::vector<const char *> &argv);//内置命令，清空控制台
     private:
-        std::string shell_head;
+        std::string promptString;
         static std::map<std::string, LittleShell::CLI::CMD> cmd_map;
     private:
         uint8_t ch = 0;//字符
@@ -149,10 +162,17 @@ namespace LittleShell {
         void Blinking(void);//设置本行字符在控制台闪烁
     private://控制台指令
         std::stack<ConsoleColor> colorStack[2];
-        ConsoleColor color[2];
+        ConsoleColor color[2] = {ConsoleColor::GREEN};
+    private:
+        std::thread cmd_thread;
+        std::atomic_int cmd_thread_flag{0};//1表示在执行cmd函数,2表示执行完毕需要回收
+        ios cmd_ios;
+        void *cmd_thread_handle = nullptr;
     };
 
+
 };
+
 
 
 #endif //LITTLESHELL_LITTLESHELL_HPP

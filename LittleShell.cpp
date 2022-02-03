@@ -55,10 +55,7 @@ namespace LittleShell {
     }
 
 
-    std::map<std::string, CLI::CMD> CLI::cmd_map = {
-            {"help", CLI::CMD("help", "Print the help information", CLI::Help)},
-            {"clr",  CLI::CMD("clr", "Clear the console", CLI::Clr)}
-    };
+
 
 //字符 !=27
 //字符 27		ESC//不处理
@@ -79,6 +76,18 @@ namespace LittleShell {
 #define enter (13)
 #define backspace (8)
     void CLI::Process(void) {
+        if (cmd_thread_flag.load() == 2) {
+            //等待释放资源
+            cmd_thread.join();
+            cmd_thread_flag.store(0);
+            //执行完命令之后开始准备
+            pos = 0;
+            len = 0;
+            state = 0;
+            wwrite("\r\n", 2);//发送换行
+            ShowPrompt();
+            Clear();//清空在执行命令期间接收的字符
+        }
         while (UsedSize()) {
             Get((char *) &ch, 1);
             //先进行按键识别
@@ -116,6 +125,29 @@ namespace LittleShell {
                     break;
             }
 
+            if (cmd_thread_flag.load() == 1) {
+                switch (key) {
+                    case 3://ctrl+c
+#ifdef _M_X64
+                        TerminateThread(cmd_thread_handle, 0);
+                        //TODO 这里要使用os提供的api结束线程
+#endif
+                        cmd_thread.detach();
+                        cmd_thread_flag.store(0);
+                        //执行完命令之后开始准备
+                        pos = 0;
+                        len = 0;
+                        state = 0;
+                        wwrite("\r\n", 2);//发送换行
+                        ShowPrompt();
+                        Clear();//清空在执行命令期间接收的字符
+                        break;
+                    default://其他按键则传输到cmd中的ios
+                        cmd_ios.Put((char *) &key, key_size);
+                        break;
+                }
+                return;
+            }
             //之后再处理按键
             if (state == 0) {
                 switch (key_size) {
@@ -160,7 +192,7 @@ namespace LittleShell {
             case enter://换行
                 wwrite("\r\n", 2);//发送换行
                 if (str.empty()) {
-                    ShowHead();
+                    ShowPrompt();
                     break;
                 }//如果命令为空直接跳过
                 str.push_back(0);//插入结束符号
@@ -191,24 +223,24 @@ namespace LittleShell {
                 cmd_now = std::string(&str[0]);//构造命令
                 map_ite = cmd_map.find(cmd_now);
                 if (map_ite != cmd_map.end()) {
-                    int retval = map_ite->second.func(*this, cmd_argv);//执行命令
-                    if (retval != 0) {
-                        SaveColor(ConsoleColorSet::ConsoleFont);
-                        SetFontColor(ConsoleColor::light_RED);
-                        printf("\r\nreturn code %d", retval);
-                        RestoreColor(ConsoleColorSet::ConsoleFont);
-                    }
+                    cmd_thread_flag.store(1);
+                    cmd_thread = std::thread([this]() {
+                        cmd_ios.Clear();
+                        int retval = map_ite->second.func(cmd_ios, cmd_argv);//执行命令
+                        if (retval != 0) {
+                            SaveColor(ConsoleColorSet::ConsoleFont);
+                            SetFontColor(ConsoleColor::light_RED);
+                            printf("\r\nreturn code %d", retval);
+                            RestoreColor(ConsoleColorSet::ConsoleFont);
+                        }
+                        cmd_thread_flag.store(2);
+                    });
+                    cmd_thread_handle = cmd_thread.native_handle();
+
                 } else {
                     printf("%s: command not found", cmd_now.c_str());
                 }
-                //执行完命令之后开始准备
                 str.clear();
-                pos = 0;
-                len = 0;
-                state = 0;
-                wwrite("\r\n", 2);//发送换行
-                ShowHead();
-                Clear();//清空在执行命令期间接收的字符
                 break;
             case backspace://退格
                 if (len) {
@@ -284,7 +316,7 @@ namespace LittleShell {
                         str.pop_back();
                         len = str.size();
                         pos = len;
-                        ShowHead();
+                        ShowPrompt();
                         if (len) {
                             wwrite(&str[0], len);
                         }
@@ -303,7 +335,7 @@ namespace LittleShell {
                         str.pop_back();
                         len = str.size();
                         pos = len;
-                        ShowHead();
+                        ShowPrompt();
                         if (len) {
                             wwrite(&str[0], len);
                         }
@@ -314,7 +346,7 @@ namespace LittleShell {
                         pos = 0;
                         putchar('\r');
                         ClearLine();
-                        ShowHead();
+                        ShowPrompt();
                     }
                 }
                 break;
@@ -375,13 +407,14 @@ namespace LittleShell {
         istream *a = static_cast<istream *>(this);
         *a = _istream;
     }
-    void CLI::ShowHead(void) {
+    void CLI::ShowPrompt(void) {
         SaveColor(ConsoleColorSet::ConsoleFont);
         SetFontColor(ConsoleColor::GREEN);
-        wwrite((char *) shell_head.c_str(), shell_head.size());
+        wwrite((char *) promptString.c_str(), promptString.size());
         RestoreColor(ConsoleColorSet::ConsoleFont);
     }
-    int CLI::InsertCMD(CLI::CMD _cli_cmd) {
+
+    int CLI::InsertCMD(const CLI::CMD &_cli_cmd) {
         if (cmd_map.count(_cli_cmd.name)) {
             return -1;//已经存在有了
         } else {
@@ -389,27 +422,33 @@ namespace LittleShell {
             return 0;
         }
     }
-    int CLI::Help(CLI &cli, const std::vector<const char *> &argv) {
+    int CLI::Help(ios &ios, const std::vector<const char *> &argv) {
         if (argv.size() == 1) {
             std::string arg(argv[0]);
-            int len = arg.length();
-            for (auto i = cmd_map.begin(); i != cmd_map.end(); i++) {
-                if (0 == arg.compare(0, len, i->first, 0, len)) {
-                    cli.printf("%s\t\t%s\r\n", i->first.c_str(), i->second.helpInfo.c_str());
+            auto len = arg.length();
+            for (auto &i: cmd_map) {
+                if (0 == arg.compare(0, len, i.first, 0, len)) {
+                    ios.printf("%s\t\t%s\r\n", i.first.c_str(), i.second.helpInfo.c_str());
                 }
             }
         } else {
-            for (auto i = cmd_map.begin(); i != cmd_map.end(); i++) {
-                cli.printf("%s\t\t%s\r\n", i->first.c_str(), i->second.helpInfo.c_str());
+            for (auto &i: cmd_map) {
+                ios.printf("%s\t\t%s\r\n", i.first.c_str(), i.second.helpInfo.c_str());
             }
         }
         return 0;
     }
-    int CLI::Clr(CLI &cli, const std::vector<const char *> &argv) {
-        cli.printf("\033[H");
-        cli.printf("\033[2J");
+    int CLI::Clr(ios &ios, const std::vector<const char *> &argv) {
+        ios.printf("\033[H");
+        ios.printf("\033[2J");
         return 0;
     }
+    std::map<std::string, CLI::CMD> CLI::cmd_map = {
+            {"help", CLI::CMD("help", "Print the help information", CLI::Help)},
+            {"clr",  CLI::CMD("clr", "Clear the console", CLI::Clr)}
+    };
+
+
     void CLI::SetConsoleColor(ConsoleColor _color, ConsoleColorSet fontORbackgrand) {
         color[(int) fontORbackgrand] = _color;
         printf("\033[%d;%dm", (int) color[(int) fontORbackgrand] % 100,
@@ -465,6 +504,4 @@ namespace LittleShell {
     void CLI::DisplayClear(void) {
         printf("\033[2J");
     }
-
-
 }

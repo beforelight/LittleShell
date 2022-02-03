@@ -4,6 +4,7 @@ project(LittleShell)
 set(CMAKE_CXX_STANDARD 14)
 
 add_definitions(-DCLI_DEBUG)
+add_definitions(-D_AMD64_)
 
 include_directories(.)
 include_directories(TelnetServLib)
